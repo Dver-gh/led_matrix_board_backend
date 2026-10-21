@@ -1,0 +1,19 @@
+#Environment
+.venv/
+venv/
+ENV/
+
+#Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.python_version
+
+#Secrets
+.env
+*.pem
+
+#System files&IDE
+.vscode/
+.idea/
