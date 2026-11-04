@@ -1,7 +1,9 @@
-import os
 import logging
+import os
+
 import requests
 from requests.exceptions import RequestException
+
 from src.models.display_payload import WeatherPayload
 
 logger = logging.getLogger(__name__)
@@ -60,6 +62,6 @@ class WeatherClient:
         except RequestException as e:
             logger.error(f"HTTP request error while fetching weather: {e}")
             return None
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             logger.error(f"Unexpected error while processing weather data: {e}")
             return None

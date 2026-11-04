@@ -1,5 +1,7 @@
 import re
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class SpotifyTrackPayload(BaseModel):
     """Pydantic model for validating and sanitizing Spotify playback data."""

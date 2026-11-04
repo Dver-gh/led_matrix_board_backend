@@ -1,8 +1,11 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from requests.exceptions import Timeout
+
 from src.clients.weather_client import WeatherClient
 from src.models.display_payload import WeatherPayload
+
 
 @pytest.fixture
 def weather_client(mocker):

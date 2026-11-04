@@ -1,6 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+from pydantic import ValidationError
 from spotipy import SpotifyException
+
 from src.clients.spotify_client import SpotifyClient
 from src.models.display_payload import SpotifyTrackPayload
 
@@ -64,14 +67,14 @@ def test_get_current_track_api_exception(spotify_client):
 def test_pydantic_payload_validation_failure():
     """Test forcing rejection of data that does not meet strict Pydantic v2 rules."""
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         SpotifyTrackPayload(
             artist="",
             track_name="Valid Track",
             is_playing=True
         )
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         SpotifyTrackPayload(
             artist="Queen",
             track_name="Song",

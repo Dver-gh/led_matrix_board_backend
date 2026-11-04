@@ -21,13 +21,13 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY tests/ ./tests
 
 RUN ruff check .
-RUN pytest
+RUN pytest -v
 
 
 #PROD
 FROM base AS prod
 
-RUN useradd -u 1000 appuser && chown -R appsuer:appuser /app
+RUN useradd -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 CMD ["python", "-m", "src.main"]

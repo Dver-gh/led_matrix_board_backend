@@ -1,7 +1,9 @@
-import os
 import logging
+import os
+
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+
 from src.models.display_payload import SpotifyTrackPayload
 
 logger = logging.getLogger(__name__)
@@ -52,6 +54,6 @@ class SpotifyClient:
         except spotipy.SpotifyException as e:
             logger.error(f"Spotify API error: {e}")
             return None
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             logger.error(f"Unexpected error while fetching track data from Spotify: {e}")
             return None
