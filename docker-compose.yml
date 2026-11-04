@@ -1,13 +1,29 @@
-version: '3.8'
-
 services:
-  mqtt-broker:
-    image: eclipse-mosquitto:2
+  mosquitto:
+    image: eclipse-mosquitto:2.0
     container_name: led_mosquitto
     restart: unless-stopped
     ports:
       - "1883:1883"
+      - "9001:9001"
     volumes:
-      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
+
+  jenkins:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: led_jenkins
+    restart: unless-stopped
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+
+volumes:
+  jenkins_home:
