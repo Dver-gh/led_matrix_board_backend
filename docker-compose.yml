@@ -11,6 +11,15 @@ services:
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
 
+  registry:
+    image: registry:2
+    container_name: led_registry
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry_data:/var/lib/registry
+
   jenkins:
     image: jenkins/jenkins:lts-jdk21
     container_name: led_jenkins
@@ -24,6 +33,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
-
 volumes:
   jenkins_home:
+  registry_data:
