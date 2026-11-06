@@ -1,0 +1,15 @@
+title = "Gitleaks Custom Configuration for Backend"
+
+[allowlist]
+  description = "Ignore test files, caches, and virtual environments"
+  paths = [
+    '''tests/.*''',
+    
+    '''__pycache__/.*''',
+    '''.pytest_cache/.*''',
+    '''.python-version/.*''',
+    '''venv/.*''',
+    '''.venv/.*''',
+    
+    '''src/config_sample\.env$'''
+  ]

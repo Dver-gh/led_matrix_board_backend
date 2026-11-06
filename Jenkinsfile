@@ -13,6 +13,16 @@ pipeline {
                 checkout scm
             }
         }
+        stage('Security Scan (Gitleaks)') {
+            steps {
+                sh """
+                    docker run --rm \
+                      -v ${WORKSPACE}:/path:z \
+                      zricethezav/gitleaks:latest \
+                      detect --source="/path" --verbose
+                """
+            }
+        }
 
         stage('Test & Lint via Docker') {
             steps {
