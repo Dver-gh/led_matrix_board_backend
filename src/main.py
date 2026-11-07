@@ -77,7 +77,7 @@ def fetch_spotify_playback():
     """Fetch current live playback state from Spotify API."""
     token = get_spotify_access_token()
     if not token:
-        return None
+        return {"is_playing": False}
 
     url = "https://api.spotify.com/v1/me/player"
     headers = {"Authorization": f"Bearer {token}"}
@@ -88,29 +88,23 @@ def fetch_spotify_playback():
             data = response.json()
             if data and data.get("is_playing"):
                 item = data.get("item", {})
-                images = item.get("album", {}).get("images", [])
-                album_art_url = images[1]["url"] if len(images) > 1 else (images[0]["url"] if images else "")
+                progress_ms = data.get("progress_ms", 0)
+                duration_ms = item.get("duration_ms", 1)
+
+                progress_percent = int((progress_ms / duration_ms) * 100) if duration_ms > 0 else 0
+                progress_percent = max(0, min(100, progress_percent))
 
                 return {
                     "is_playing": True,
                     "track_name": item.get("name"),
                     "artist": ", ".join([artist["name"] for artist in item.get("artists", [])]),
-                    "progress_ms": data.get("progress_ms", 0),
-                    "duration_ms": item.get("duration_ms", 0),
-                    "album_art_url": album_art_url
+                    "progress": progress_percent
                 }
+
     except (requests.exceptions.RequestException, ValueError) as e:
         print(f"Error fetching Spotify playback: {e}")
 
     return {"is_playing": False}
-
-def generate_ascii_bar(progress_ms, duration_ms, bar_length=20):
-    """Generate an ASCII progress bar string based on playback progress."""
-    if not duration_ms or duration_ms <= 0:
-        return "--------------------"
-    progress_pct = min(max(progress_ms / duration_ms, 0.0), 1.0)
-    filled_length = int(bar_length * progress_pct)
-    return "█" * filled_length + "-" * (bar_length - filled_length)
 
 def main():
     print("LED Matrix Board system started. Default mode: WEATHER.")
@@ -130,20 +124,11 @@ def main():
                 print("Music playback detected -> Switching to SPOTIFY mode.")
                 current_mode = "spotify"
 
-            track_name = spotify_data.get("track_name")
-            artist = spotify_data.get("artist")
-            progress_ms = spotify_data.get("progress_ms", 0)
-            duration_ms = spotify_data.get("duration_ms", 1)
-
-            ascii_bar = generate_ascii_bar(progress_ms, duration_ms)
-
             payload = {
                 "mode": "spotify",
-                "artist": artist,
-                "track_name": track_name,
-                "progress_bar": ascii_bar,
-                "progress_ms": progress_ms,
-                "duration_ms": duration_ms
+                "artist": spotify_data.get("artist"),
+                "track_name": spotify_data.get("track_name"),
+                "progress": spotify_data.get("progress", 0)
             }
 
             client.publish(TOPIC_DISPLAY, json.dumps(payload))
