@@ -15,11 +15,15 @@ pipeline {
         }
         stage('Security Scan (Gitleaks)') {
             steps {
+                // DooD: bind-mounting ${WORKSPACE} would resolve against the host (where the
+                // path doesn't exist, since it lives in the jenkins_home volume). --volumes-from
+                // mounts the Jenkins container's volumes at the same paths, so ${WORKSPACE} is real.
                 sh """
                     docker run --rm \
-                      -v ${WORKSPACE}:/path:z \
+                      --volumes-from led_jenkins \
+                      -w "${WORKSPACE}" \
                       zricethezav/gitleaks:latest \
-                      detect --source="/path" --verbose
+                      detect --source="${WORKSPACE}" --verbose
                 """
             }
         }
