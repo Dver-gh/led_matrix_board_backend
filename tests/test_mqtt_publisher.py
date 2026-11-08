@@ -2,91 +2,89 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.models.display_payload import WeatherPayload
+from src.models.display_payload import SpotifyTrackPayload, WeatherPayload
 from src.services.mqtt_publisher import MqttPublisher
 
 
 @pytest.fixture
 def mock_mqtt_client(mocker):
-    """
-    Fixture that mocks the paho.mqtt.client.Client class,
-    preventing any real network connections during tests.
-    """
+    """Mocks paho.mqtt.client.Client so no real network connection is made."""
     mock_client_class = mocker.patch("src.services.mqtt_publisher.mqtt.Client")
-    mock_instance = mock_client_class.return_value
-    return mock_instance
+    return mock_client_class.return_value
 
 
 @pytest.fixture
-def publisher(mock_mqtt_client):
-    """Fixture providing an instance of MqttPublisher with a mocked MQTT client."""
+def publisher(mocker, mock_mqtt_client):
+    """MqttPublisher with deterministic broker/topic config."""
+    mocker.patch.dict(
+        "os.environ",
+        {
+            "MQTT_BROKER_HOST": "localhost",
+            "MQTT_BROKER_PORT": "1883",
+            "MQTT_TOPIC": "home/led/display/state",
+        },
+    )
     return MqttPublisher()
 
 
-def test_publisher_initialization(mock_mqtt_client):
-    """Test that MqttPublisher initializes and sets callbacks correctly."""
-    publisher = MqttPublisher()
-
+def test_publisher_initialization(publisher, mock_mqtt_client):
     assert mock_mqtt_client.on_connect == publisher._on_connect
     assert mock_mqtt_client.on_disconnect == publisher._on_disconnect
 
 
 def test_connect(publisher, mock_mqtt_client):
-    """Test establishing connection to the MQTT broker and starting the loop."""
     publisher.connect()
 
     mock_mqtt_client.connect.assert_called_once_with("localhost", 1883, keepalive=60)
     mock_mqtt_client.loop_start.assert_called_once()
 
 
-def test_publish_success(publisher, mock_mqtt_client):
-    """Test successful serialization and publishing of a Pydantic model to a sub-topic."""
-    weather_data = WeatherPayload(
-        city="Warsaw",
-        temperature=20.0,
-        condition="Sunny",
-        humidity=50
+def test_publish_to_single_topic(publisher, mock_mqtt_client):
+    """Weather publishes to the one topic the firmware subscribes to (no sub-topic)."""
+    payload = WeatherPayload(temp=20, condition="Sunny", location="Wroclaw")
+
+    info = MagicMock()
+    info.rc = 0
+    mock_mqtt_client.publish.return_value = info
+
+    assert publisher.publish(payload) is True
+
+    topic, payload_json = mock_mqtt_client.publish.call_args[0][:2]
+    assert topic == "home/led/display/state"
+    assert "Sunny" in payload_json
+    assert '"temp":20' in payload_json
+
+
+def test_publish_preserves_utf8(publisher, mock_mqtt_client):
+    """Non-ASCII characters are sent as real UTF-8, not \\uXXXX escapes."""
+    payload = SpotifyTrackPayload(
+        artist="¥$, Kanye West, Ty Dolla $ign",
+        track_name="Carnival",
+        progress=42,
     )
 
-    mock_info = MagicMock()
-    mock_info.rc = 0
-    mock_mqtt_client.publish.return_value = mock_info
+    info = MagicMock()
+    info.rc = 0
+    mock_mqtt_client.publish.return_value = info
 
-    success = publisher.publish(weather_data, sub_topic="weather")
+    publisher.publish(payload)
 
-    assert success is True
-    mock_mqtt_client.publish.assert_called_once()
-
-    call_args = mock_mqtt_client.publish.call_args[0]
-    topic = call_args[0]
-    payload_json = call_args[1]
-
-    assert topic == "home/led/display/weather"
-    assert "Warsaw" in payload_json
-    assert "20.0" in payload_json
+    payload_json = mock_mqtt_client.publish.call_args[0][1]
+    assert "¥" in payload_json
+    assert "\\u00a5" not in payload_json
 
 
 def test_publish_failure(publisher, mock_mqtt_client):
-    """Test handling of publishing failure returned by the broker."""
-    weather_data = WeatherPayload(
-        city="Krakow",
-        temperature=15.0,
-        condition="Cloudy",
-        humidity=70
-    )
+    payload = WeatherPayload(temp=15, condition="Cloudy", location="Krakow")
 
-    mock_info = MagicMock()
-    mock_info.rc = 4
-    mock_mqtt_client.publish.return_value = mock_info
+    info = MagicMock()
+    info.rc = 4
+    mock_mqtt_client.publish.return_value = info
 
-    success = publisher.publish(weather_data)
-
-    assert success is False
-    mock_mqtt_client.publish.assert_called_once()
+    assert publisher.publish(payload) is False
 
 
 def test_disconnect(publisher, mock_mqtt_client):
-    """Test clean disconnection from the broker."""
     publisher.disconnect()
 
     mock_mqtt_client.loop_stop.assert_called_once()

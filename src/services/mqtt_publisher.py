@@ -11,7 +11,7 @@ class MqttPublisher:
     def __init__(self):
         self.broker_host = os.getenv("MQTT_BROKER_HOST", "localhost")
         self.broker_port = int(os.getenv("MQTT_BROKER_PORT", "1883"))
-        self.base_topic = os.getenv("MQTT_TOPIC", "home/led/display")
+        self.base_topic = os.getenv("MQTT_TOPIC", "home/led/display/state")
 
         try:
             self.client = mqtt.Client(
@@ -57,12 +57,14 @@ class MqttPublisher:
         try:
             target_topic = f"{self.base_topic}/{sub_topic}" if sub_topic else self.base_topic
 
+            # Pydantic's model_dump_json emits real UTF-8 (no \u escaping); keep that behaviour
+            # for the dict/other fallbacks too so the firmware receives true bytes, not \uXXXX.
             if hasattr(data_model, "model_dump_json"):
                 payload_json = data_model.model_dump_json()
             elif hasattr(data_model, "dict"):
-                payload_json = json.dumps(data_model.dict())
+                payload_json = json.dumps(data_model.dict(), ensure_ascii=False)
             else:
-                payload_json = json.dumps(data_model)
+                payload_json = json.dumps(data_model, ensure_ascii=False)
 
             info = self.client.publish(target_topic, payload_json, qos=1)
 
